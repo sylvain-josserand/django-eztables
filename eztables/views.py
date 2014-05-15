@@ -111,8 +111,7 @@ class DatatablesView(MultipleObjectMixin, View):
                     for token in tokens:
                         self._searchable_fields[token] = is_searchable
                 else:
-                    self._searchable_fields[field_name] = is_searchable
-        
+                    self._searchable_fields[field_name] = is_searchable  
         result = self._searchable_fields.get(field, True)
         return result
 
@@ -154,13 +153,14 @@ class DatatablesView(MultipleObjectMixin, View):
                     queryset = queryset.filter(search)
             else:
                 for term in search.split():
-                    criterions = (
+                    criterions = [
                         Q(**{'%s__icontains' % field: term})
                         for field in self.get_db_fields()
                         if self.is_searchable(field)
-                    )
-                    search = reduce(or_, criterions)
-                    queryset = queryset.filter(search)
+                    ]
+                    if len(criterions) > 0:
+                        search = reduce(or_, criterions)
+                        queryset = queryset.filter(search)
         return queryset
 
     def column_search(self, queryset):
@@ -237,4 +237,3 @@ class DatatablesView(MultipleObjectMixin, View):
             json.dumps(data, cls=DjangoJSONEncoder),
             mimetype=JSON_MIMETYPE
         )
-
