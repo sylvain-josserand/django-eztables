@@ -699,12 +699,7 @@ class DatatablesTestMixin(object):
 
 
 class ArrayMixin(object):
-    urls = patterns('',
-        url(r'^$', BrowserDatatablesView.as_view(), name='browsers'),
-        url(r'^formatted/$', FormattedBrowserDatatablesView.as_view(), name='formatted-browsers'),
-        url(r'^custom/$', CustomBrowserDatatablesView.as_view(), name='custom-browsers'),
-        url(r'^special/$', SpecialCaseDatatablesView.as_view(), name='special'),
-    )
+    urls = 'eztables.tests.array_urls'
 
     def value(self, row, field_id):
         return row[field_id]
@@ -715,13 +710,7 @@ class ArrayMixin(object):
 
 
 class ObjectMixin(object):
-    urls = patterns('',
-        url(r'^$', ObjectBrowserDatatablesView.as_view(), name='browsers'),
-        url(r'^formatted/$', FormattedObjectBrowserDatatablesView.as_view(), name='formatted-browsers'),
-        url(r'^custom/$', CustomObjectBrowserDatatablesView.as_view(), name='custom-browsers'),
-        url(r'^special/$', SpecialCaseDatatablesView.as_view(), name='special'),
-    )
-
+    urls = 'eztables.tests.object_urls'
     id_to_name = {
         0: 'engine',
         1: 'name',
