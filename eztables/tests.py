@@ -498,6 +498,24 @@ class DatatablesTestMixin(object):
         for row in data['aaData']:
             self.assertEqual(self.value(row, ENGINE_NAME), 'engine')
 
+    def test_global_search_single_term_with_some_unsearchable_fields(self):
+        '''Should do a global search on a single term with some unsearchable
+        fields not being returned'''
+        for _ in xrange(2):
+            BrowserFactory(name='test')
+        for _ in xrange(3):
+            BrowserFactory(name='test', engine__name='test')
+
+        response = self.get_response(
+            'browsers',
+            self.build_query(**{
+                'sSearch': 'test',
+                'bSearchable_%d' % NAME: False}))
+        data = json.loads(response.content.decode())
+        self.assertEqual(len(data['aaData']), 3)
+        for row in data['aaData']:
+            self.assertEqual(self.value(row, NAME), 'test')
+
     def test_global_search_many_terms(self):
         '''Should do a global search on many terms'''
         for _ in xrange(2):
@@ -508,6 +526,50 @@ class DatatablesTestMixin(object):
             BrowserFactory(name='test', engine__name='engine')
 
         response = self.get_response('browsers', self.build_query(sSearch='test engine'))
+        data = json.loads(response.content.decode())
+        self.assertEqual(len(data['aaData']), 4)
+        for row in data['aaData']:
+            self.assertEqual(self.value(row, ENGINE_NAME), 'engine')
+            self.assertEqual(self.value(row, NAME), 'test')
+
+    def test_global_search_many_terms_on_unsearchable_fields(self):
+        '''Should do a global search on many terms, avoiding
+        unsearchable fields'''
+        for _ in xrange(2):
+            BrowserFactory(name='test')
+        for _ in xrange(3):
+            BrowserFactory(engine__name='engine')
+        for _ in xrange(4):
+            BrowserFactory(name='test', engine__name='engine')
+
+        response = self.get_response(
+            'browsers',
+            self.build_query(**{
+                'sSearch': 'test engine',
+                'bSearchable_%d' % NAME: False,
+            }))
+        data = json.loads(response.content.decode())
+        self.assertEqual(len(data['aaData']), 0)
+
+    def test_global_search_many_terms_on_searchable_fields(self):
+        '''Should do a global search on many terms, avoiding
+        unsearchable fields'''
+        for _ in xrange(2):
+            BrowserFactory(name='test')
+        for _ in xrange(3):
+            BrowserFactory(engine__name='engine')
+        for _ in xrange(4):
+            BrowserFactory(name='test', engine__name='engine')
+
+        response = self.get_response(
+            'browsers',
+            self.build_query(**{
+                'sSearch': 'test engine',
+                'bSearchable_%d' % VERSION: False,
+                'bSearchable_%d' % PLATFORM: False,
+                'bSearchable_%d' % ENGINE_VERSION: False,
+                'bSearchable_%d' % ENGINE_CSS_GRADE: False,
+            }))
         data = json.loads(response.content.decode())
         self.assertEqual(len(data['aaData']), 4)
         for row in data['aaData']:
@@ -581,6 +643,20 @@ class DatatablesTestMixin(object):
         self.assertEqual(len(data['aaData']), 2)
         for row in data['aaData']:
             self.assertEqual(self.value(row, NAME), 'test')
+
+    def test_column_search_regex_on_unsearchable_fields(self):
+        '''Should filter on a single column with regex'''
+        for _ in xrange(3):
+            BrowserFactory()
+        for _ in xrange(2):
+            BrowserFactory(name='test')
+
+        response = self.get_response('browsers', self.build_query(
+            sSearch_1='[tes]{4}',
+            bRegex_1=True,
+            bSearchable_1=False))
+        data = json.loads(response.content.decode())
+        self.assertEqual(len(data['aaData']), 5)
 
     def test_column_search_custom(self):
         '''Should filter on a single column with custom search'''
