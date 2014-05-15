@@ -106,12 +106,7 @@ class DatatablesView(MultipleObjectMixin, View):
             for idx in xrange(self.dt_data['iColumns']):
                 is_searchable = self.dt_data['bSearchable_%d' % idx]
                 field_name = self.get_field(idx)
-                if RE_FORMATTED.match(field_name):
-                    tokens = RE_FORMATTED.findall(field_name)
-                    for token in tokens:
-                        self._searchable_fields[token] = is_searchable
-                else:
-                    self._searchable_fields[field_name] = is_searchable  
+                self._searchable_fields[field_name] = is_searchable
         result = self._searchable_fields.get(field, True)
         return result
 
@@ -146,7 +141,8 @@ class DatatablesView(MultipleObjectMixin, View):
                 criterions = [
                     Q(**{'%s__iregex' % field: search})
                     for field in self.get_db_fields()
-                    if self.can_regex(field)
+                    if self.can_regex(field) and
+                    self.is_searchable(field)
                 ]
                 if len(criterions) > 0:
                     search = reduce(or_, criterions)
@@ -175,13 +171,21 @@ class DatatablesView(MultipleObjectMixin, View):
                     field = self.get_field(idx)
                     fields = RE_FORMATTED.findall(field) if RE_FORMATTED.match(field) else [field]
                     if self.dt_data['bRegex_%s' % idx]:
-                        criterions = [Q(**{'%s__iregex' % field: search}) for field in fields if self.can_regex(field)]
+                        criterions = [
+                            Q(**{'%s__iregex' % field: search})
+                            for field in fields
+                            if self.can_regex(field) and self.is_searchable(field)
+                        ]
                         if len(criterions) > 0:
                             search = reduce(or_, criterions)
                             queryset = queryset.filter(search)
                     else:
                         for term in search.split():
-                            criterions = (Q(**{'%s__icontains' % field: term}) for field in fields)
+                            criterions = (
+                                Q(**{'%s__icontains' % field: term})
+                                for field in fields
+                                if self.is_searchable(field)
+                            )
                             search = reduce(or_, criterions)
                             queryset = queryset.filter(search)
         return queryset
