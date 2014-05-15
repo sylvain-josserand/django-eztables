@@ -100,6 +100,22 @@ class DatatablesView(MultipleObjectMixin, View):
         else:
             return True
 
+    def is_searchable(self, field):
+        if not hasattr(self, "_searchable_fields"):
+            self._searchable_fields = {}
+            for idx in xrange(self.dt_data['iColumns']):
+                is_searchable = self.dt_data['bSearchable_%d' % idx]
+                field_name = self.get_field(idx)
+                if RE_FORMATTED.match(field_name):
+                    tokens = RE_FORMATTED.findall(field_name)
+                    for token in tokens:
+                        self._searchable_fields[token] = is_searchable
+                else:
+                    self._searchable_fields[field_name] = is_searchable
+        
+        result = self._searchable_fields.get(field, True)
+        return result
+
     def get_orders(self):
         '''Get ordering fields for ``QuerySet.order_by``'''
         orders = []
@@ -138,7 +154,11 @@ class DatatablesView(MultipleObjectMixin, View):
                     queryset = queryset.filter(search)
             else:
                 for term in search.split():
-                    criterions = (Q(**{'%s__icontains' % field: term}) for field in self.get_db_fields())
+                    criterions = (
+                        Q(**{'%s__icontains' % field: term})
+                        for field in self.get_db_fields()
+                        if self.is_searchable(field)
+                    )
                     search = reduce(or_, criterions)
                     queryset = queryset.filter(search)
         return queryset
@@ -217,3 +237,4 @@ class DatatablesView(MultipleObjectMixin, View):
             json.dumps(data, cls=DjangoJSONEncoder),
             mimetype=JSON_MIMETYPE
         )
+
